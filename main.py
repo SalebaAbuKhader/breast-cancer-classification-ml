@@ -1,111 +1,59 @@
-#Task 1 : Perform EDA and Preprocessing 
-import pandas as pd
-import numpy as np
-from sklearn.datasets import fetch_california_housing
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression, LogisticRegression 
-from sklearn.metrics import mean_squared_error , confusion_matrix , classification_report
-from sklearn.preprocessing import LabelEncoder , StandardScaler
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
 
+# Load Dataset
+data = load_breast_cancer()
+X, y = data.data, data.target
 
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Load dataset 
+# display dataset information
+#print(f"Features: {data.feature_names}")
+#print(f"Classes: {data.target_names}")
 
-Data = fetch_california_housing(as_frame=True)
-df = Data.frame
+# Train Gradient Boosting model
+gb_model = GradientBoostingClassifier(random_state=42)
+gb_model.fit(X_train, y_train)
 
-# define features and target 
+# Predict
+y_pred_gb = gb_model.predict(X_test)
 
-X = df[["MedInc", "HouseAge", "AveRooms"]]
-y = df["MedHouseVal"]
+# Evaluate performance
+accuracy_gb = accuracy_score(y_test, y_pred_gb)
+print(f"Gradient Boosting Accuracy: {accuracy_gb}")
+print("\n Classification Report: \n", classification_report(y_test, y_pred_gb))
 
-# Inspect data 
+# Define hyperparameter grid
+param_grid = {
+    'learning_rate': [0.01, 0.1, 0.2],
+    'n_estimators': [50, 100, 200],
+    'max_depth': [3, 5, 7]
+}
 
-print(df.info())
-print(df.describe())
+# Perform Grid Search
+grid_search = GridSearchCV(
+    estimator=GradientBoostingClassifier(random_state=42),
+    param_grid=param_grid,
+    cv=5,
+    scoring='accuracy',
+    n_jobs=-1
+)
 
-# check missing values
-print("Missing values: ", df.isnull().sum())
+grid_search.fit(X_train, y_train)
 
-# Visualize relationships 
-sns.pairplot(df , vars=["MedInc", "HouseAge", "AveRooms", "MedHouseVal"])
-plt.show()
+# Display best parametrs and score
+print(f"Best Parameters: {grid_search.best_params_}")
+print(f"Best Cross-Validation Accuracy: {grid_search.best_score_}")
 
-#split dataset
-X_train , X_test , y_train , y_test = train_test_split(X, y, test_size=0.2,random_state=42)
+# train random forst  
+rf_model = RandomForestClassifier(random_state=42)
+rf_model.fit(X_train, y_train)
 
-#Train linear reg
-model = LinearRegression()
-model.fit(X_train,y_train)
+#pred
+y_pred_rf = rf_model.predict(X_test)
 
-#make pred
-y_pred = model.predict(X_test)
-
-#evalute performance 
-mse = mean_squared_error(y_test, y_pred)
-print("Linear Regression MSE: ", mse)
-
-#Task 2 : Train And evaluate multiple models 
-
-#Load telco customer churn dataset 
-
-df_telco = pd.read_csv("Telco-Customer-Churn.csv")
-
-# Inspect data
-print(df_telco.info())
-print(df_telco.describe())
-
-# check missing values
-print("Missing values: ", df_telco.isnull().sum())
-
-#handle missing values
-df_telco.fillna(df_telco.mean(), inplace=True)
-
-#Visualize Chuuurn  distribution 
-sns.countplot(x="churn", data=df_telco)
-plt.title("Churn Dis")
-plt.show()
-
-#Encode categorical variables 
-
-le = LabelEncoder() 
-df_telco['churn'] = le.fit_transform(df_telco['churn'])
-df_telco['gender'] = le.fit_transform(df_telco['gender'])
-df_telco['contact_type'] = le.fit_transform(df_telco['contact_type'])
-df_telco['payment_method'] = le.fit_transform(df_telco['payment_method'])
-
-#define features and target 
-X = df_telco.drop(['churn'])
-y = df_telco['churn'] 
-
-# scale features 
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-# split dataset 
-X_train, X_test, y_train , y_test = train_test_split(X_scaled, y, test_size= 0.2 , random_state = 42)
-
-# Train Logistic regression 
-Log_model = LogisticRegression(max_iter=200)
-Log_model.fit(X_train, y_train)
-
-#train knn Model 
-knn_model = KNeighborsClassifier(n_neighbors=5)
-knn_model.fit(X_train, y_train)
-
-#evalute models 
-
-log_pred = Log_model.predict(X_test)
-knn_pred = knn_model.predict(X_test)
-
-print("\n Logistic Regression Clasification report:")
-print(classification_report(y_test, log_pred))
-
-print("\n k-NN  Clasification report:")
-print(classification_report(y_test, knn_pred))
-
-# confusion matrix for logistic regression 
-print("confusion matrix for logistic regression", confusion_matrix(y_test, log_pred))
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+print("\n Random Forest Accuracy: ", accuracy_rf)
